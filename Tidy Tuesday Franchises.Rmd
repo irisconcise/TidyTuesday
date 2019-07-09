@@ -1,0 +1,99 @@
+---
+title: "Tidy Tuesday Franchises"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+install.packages("plotly")
+library(tidyverse)
+library(plotly)
+```
+
+#Import Data
+```{r}
+media_franchises <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-02/media_franchises.csv")
+
+media_franchises <- na.omit(media_franchises)
+str(media_franchises)
+summary(media_franchises)
+```
+
+# Want to do linear regression with year created and revenue
+```{r}
+mf <- media_franchises %>%
+  group_by(year_created,franchise)%>%
+  rename(Year=year_created,Franchise=franchise)%>%
+  summarize(Revenue=sum(revenue))%>%
+  arrange(desc(Revenue))
+  
+```
+
+
+# Plot a scatterplot
+
+```{r}
+x<-ggplot(mf,aes(x=Year,y=Revenue))+
+  geom_point(aes(col=Revenue,text=paste("Franchise:",Franchise)),shape=15,size=1.5,alpha=0.9)+
+  scale_colour_distiller(palette="Spectral")+
+  labs(x="Year Created",y="Revenue (Billions)",col="Revenue")+
+  theme_gray()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+   labs(title = "Revenue of Franchises Over Time")+
+  theme(plot.title = element_text(hjust = 0.5))
+x
+
+#x<-ggplotly(x,tooltip=text2)
+x<-style(x,hoverinfo="text")
+x
+#mytext=paste(" Year = ", mf$year_created, "\n" , "Revenue = ", mf$revenue_billions, "Billion", "\n","Franchise:",mf$franchise) 
+#plot=plotly_build(x)
+#style(plot,text=mytext,hoverinfo="text")
+htmlwidgets::saveWidget(x, "plot.html")
+htmlwidgets::saveWidget(widget=x,"plot2.html", selfcontained = FALSE)
+
+Sys.setenv("plotly_username" = "robwatson1996")
+Sys.setenv("plotly_api_key" = "NBiGub4dd5ymf5GmHIi2")
+api_create(x, filename = "Franchises")
+
+```
+
+
+
+#Create data set since from 1996  
+
+```{r}
+mf_1996<- media_franchises %>%
+  
+ filter(year_created>=1996)
+```
+
+```{r}
+ggplot(mf_1996,aes(x=franchise,y=revenue))+
+  geom_bar(stat="identity")+
+  facet_wrap(~revenue_category)
+```
+
