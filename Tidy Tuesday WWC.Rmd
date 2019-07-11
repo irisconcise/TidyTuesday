@@ -1,0 +1,68 @@
+---
+title: "Tidy Tuesday WWC"
+output: github_document
+---
+
+#Loading Packages
+
+```{r Installing Package}
+library(tidyverse)
+#install.packages("here")
+library(here)
+#install.packages("rvest")
+library(rvest)
+```
+
+#Reading in the data
+
+```{r}
+wwc_outcomes <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-09/wwc_outcomes.csv")
+squads <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-09/squads.csv")
+codes <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-07-09/codes.csv")
+
+wwc_outcomes<- dplyr::left_join(wwc_outcomes, codes, by = "team")
+
+wwc_outcomes[is.na(wwc_outcomes)] <- 0
+squads[is.na(squads)] <- 0
+
+```
+#Filtering and Manipulating Data
+```{r Calculating Goals Per Game for DF,MF & FW}
+
+goals_per_game <- squads %>%
+  filter(pos!="GK" & caps>=25)%>% #Removing Goalkeepers and filtering with players with over 25 caps
+  group_by(player,pos,goals,caps)%>% #group by statement
+  summarize(average_goals=round(sum(goals)/sum(caps),2))%>% # Creating goals per cap (2dp)
+  arrange(desc(average_goals))%>% #Arranging by average goals 
+  arrange(desc(pos)) # arranging by position
+
+
+check <- goals_per_game %>%
+  group_by(pos)%>%
+  mutate(rank=rank(desc(average_goals), ties.method="first"))%>% #creating a rank to get the top 10 goals per games per pos as the group by is looking at pos. The ties.method="first" gives me ranks by the first data point seen if there is a joint rank
+  filter(rank<=10) #Filtering on top 
+  
+
+
+```
+
+
+#Creating Graph
+```{r Creating Graph of top 10 goals per cap by position}
+graph <- ggplot(check,aes(x=player,average_goals,label=average_goals))+
+  geom_col(fill="white")+ #White fill for bars
+  expand_limits(y=0)+
+  geom_text(aes(label=paste0('Goals Scored:',goals),y=0.18),size=2.5,nudge_y = 0)+ #Creating labelling of how many goals the player scored
+  coord_flip()+ #Flip Coords
+  facet_wrap(~pos,scales="free")+ #Splitting into 3 graphs to show different positions
+  ylim(0,1.0)+
+  theme_minimal()+ #Minimal theme
+    theme(panel.background = element_rect(fill = "green",colour = "green"))+ #Colouring backgroun in green for football reference
+ labs(x='Player',y='Goals Per Cap',caption = "Players must have had 25 caps or more")+ #labelling y,x and caption of the graph
+  theme(plot.caption = element_text(size=7, face = "italic"))+ #Making Caption smaller and italics
+    ggtitle('Top 10 Goals Per Cap by Position')+
+  theme(plot.title = element_text(hjust = 0.5)) #Title centred 
+
+  graph
+```
+
